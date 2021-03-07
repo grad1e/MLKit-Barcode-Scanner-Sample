@@ -26,8 +26,7 @@ import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.common.InputImage
 import dev.daryl.mlkitbarcodescanner.databinding.ActivityMainBinding
 import dev.daryl.mlkitbarcodescanner.databinding.BottomSheetBarcodeBinding
-import dev.daryl.mlkitbarcodescanner.utils.getAspectRatio
-import dev.daryl.mlkitbarcodescanner.utils.showToast
+import dev.daryl.mlkitbarcodescanner.utils.*
 
 class MainActivity : AppCompatActivity() {
 
@@ -162,6 +161,8 @@ class MainActivity : AppCompatActivity() {
 
     @SuppressLint("UnsafeExperimentalUsageError")
     private fun processImageProxy(barcodeScanner: BarcodeScanner, imageProxy: ImageProxy) {
+
+        // This scans the entire screen for barcodes
         imageProxy.image?.let { image ->
             val inputImage = InputImage.fromMediaImage(image, imageProxy.imageInfo.rotationDegrees)
             barcodeScanner.process(inputImage)
@@ -177,6 +178,40 @@ class MainActivity : AppCompatActivity() {
                     imageProxy.close()
                 }
         }
+/*
+        // Takes a screenshot of the camera feed (previewView)
+        val previewViewBitmap = binding.previewView.bitmap
+
+        if (previewViewBitmap != null) {
+
+            // Takes a screenshot of the view AppCompatImageView
+            getScreenShotFromView(binding.imageOverlay, this) {
+
+                // Darkens the view screenshot to keep the transparent portion intact, otherwise the barcode scanner will see through the
+                // partially transparent view and will detect the code
+                val darkenedBitmap = darkenBitMap(it)
+
+                // Overlays the darkenedImage over the original camera feed which gives a bitmap with only the centre portion visible
+                val overLaidBitmap = overlayBitmap(previewViewBitmap, darkenedBitmap)
+
+                // Converts the overlaid bitmap into an inputImage for barcode scanner to scan
+                val inputImage =
+                    InputImage.fromBitmap(overLaidBitmap, imageProxy.imageInfo.rotationDegrees)
+                barcodeScanner.process(inputImage)
+                    .addOnSuccessListener { barcodeList ->
+                        if (!barcodeList.isNullOrEmpty()) {
+                            Log.i(TAG, "processImageProxy: " + barcodeList[0].rawValue)
+                            cameraProvider.unbindAll()
+                            openBottomSheet(barcodeList[0].rawValue!!) // Change this as required
+                        }
+                    }.addOnFailureListener {
+                        Log.e(TAG, "processImageProxy: ", it)
+                    }.addOnCompleteListener {
+                        imageProxy.close()
+                    }
+            }
+        }
+*/
     }
 
     private fun setupCameraProvider() {
