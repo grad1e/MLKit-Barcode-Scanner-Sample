@@ -37,8 +37,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
     private val viewModel by viewModels<MainViewModel> { MainViewModelFactory() }
 
-    private lateinit var camera: Camera
-    private lateinit var cameraProvider: ProcessCameraProvider
+    private var camera: Camera? = null
+    private var cameraProvider: ProcessCameraProvider? = null
 
     private val cameraSelector by lazy {
         CameraSelector.Builder().requireLensFacing(CameraSelector.LENS_FACING_BACK).build()
@@ -111,10 +111,10 @@ class MainActivity : AppCompatActivity() {
     private fun setupClickListeners() {
         viewModel.isBtnFlashClicked.asLiveData().observe(this) {
             if (it) {
-                if (camera.cameraInfo.torchState.value == TorchState.ON) {
-                    camera.cameraControl.enableTorch(false)
+                if (camera?.cameraInfo?.torchState?.value == TorchState.ON) {
+                    camera?.cameraControl?.enableTorch(false)
                 } else {
-                    camera.cameraControl.enableTorch(true)
+                    camera?.cameraControl?.enableTorch(true)
                 }
             }
         }
@@ -149,7 +149,7 @@ class MainActivity : AppCompatActivity() {
             .build()
 
         try {
-            camera = cameraProvider.bindToLifecycle(
+            camera = cameraProvider?.bindToLifecycle(
                 this,
                 cameraSelector,
                 useCaseGroup
@@ -169,7 +169,7 @@ class MainActivity : AppCompatActivity() {
                 .addOnSuccessListener { barcodeList ->
                     if (!barcodeList.isNullOrEmpty()) {
                         Log.i(TAG, "processImageProxy: " + barcodeList[0].rawValue)
-                        cameraProvider.unbindAll()
+                        cameraProvider?.unbindAll()
                         openBottomSheet(barcodeList[0].rawValue!!) // Change this as required
                     }
                 }.addOnFailureListener {
