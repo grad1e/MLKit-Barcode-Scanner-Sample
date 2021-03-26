@@ -159,10 +159,20 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    @SuppressLint("UnsafeExperimentalUsageError")
     private fun processImageProxy(barcodeScanner: BarcodeScanner, imageProxy: ImageProxy) {
 
+        /**
+         * Use any one of the given functions
+         */
         // This scans the entire screen for barcodes
+        scanEntireView(barcodeScanner, imageProxy)
+
+        // This scans only a small part - done using bitmap - not recommended
+        //scanPartOfTheView(barcodeScanner, imageProxy)
+    }
+
+    @SuppressLint("UnsafeExperimentalUsageError")
+    private fun scanEntireView(barcodeScanner: BarcodeScanner, imageProxy: ImageProxy) {
         imageProxy.image?.let { image ->
             val inputImage = InputImage.fromMediaImage(image, imageProxy.imageInfo.rotationDegrees)
             barcodeScanner.process(inputImage)
@@ -178,7 +188,9 @@ class MainActivity : AppCompatActivity() {
                     imageProxy.close()
                 }
         }
-/*
+    }
+
+    private fun scanPartOfTheView(barcodeScanner: BarcodeScanner, imageProxy: ImageProxy) {
         // Takes a screenshot of the camera feed (previewView)
         val previewViewBitmap = binding.previewView.bitmap
 
@@ -201,17 +213,16 @@ class MainActivity : AppCompatActivity() {
                     .addOnSuccessListener { barcodeList ->
                         if (!barcodeList.isNullOrEmpty()) {
                             Log.i(TAG, "processImageProxy: " + barcodeList[0].rawValue)
-                            cameraProvider.unbindAll()
+                            cameraProvider?.unbindAll()
                             openBottomSheet(barcodeList[0].rawValue!!) // Change this as required
                         }
-                    }.addOnFailureListener {
-                        Log.e(TAG, "processImageProxy: ", it)
+                    }.addOnFailureListener { exception ->
+                        Log.e(TAG, "processImageProxy: ", exception)
                     }.addOnCompleteListener {
                         imageProxy.close()
                     }
             }
         }
-*/
     }
 
     private fun setupCameraProvider() {
