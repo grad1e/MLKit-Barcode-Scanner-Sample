@@ -20,7 +20,11 @@ android {
         }
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
-
+    applicationVariants.all { variant ->
+        variant.outputs.all {
+            outputFileName = "ml_kit_barcode_scannner_${variant.buildType.name}_${defaultConfig.versionName}.apk"
+        }
+    }
     buildTypes {
         release {
             minifyEnabled true
