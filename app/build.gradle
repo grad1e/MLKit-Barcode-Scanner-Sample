@@ -9,6 +9,20 @@ android {
     compileSdkVersion 30
     buildToolsVersion "30.0.3"
 
+    signingConfigs {
+        Properties properties = new Properties()
+        if (rootProject.file("local.properties").exists()) {
+            properties.load(rootProject.file("local.properties").newDataInputStream())
+        }
+
+        release {
+            storeFile file(properties.getProperty('RELEASE_STORE_FILE'))
+            storePassword properties.getProperty('RELEASE_STORE_PASSWORD')
+            keyAlias properties.getProperty('RELEASE_KEY_ALIAS')
+            keyPassword properties.getProperty('RELEASE_KEY_PASSWORD')
+        }
+    }
+
     defaultConfig {
         applicationId "dev.daryl.mlkitbarcodescanner"
         minSdkVersion 21
@@ -23,16 +37,15 @@ android {
 
     buildTypes {
         release {
-            minifyEnabled false
+            minifyEnabled true
+            shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.release
+
         }
-    }
-    compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
-    }
-    kotlinOptions {
-        jvmTarget = '1.8'
+        debug {
+            applicationIdSuffix ".debug"
+        }
     }
 }
 
@@ -42,12 +55,12 @@ dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
 
     // Appcompat
-    implementation 'androidx.appcompat:appcompat:1.2.0'
+    implementation 'androidx.appcompat:appcompat:1.3.0'
 
     // Material
     implementation 'com.google.android.material:material:1.3.0'
 
-    //Cosntraint Layout
+    //Constraint Layout
     implementation 'androidx.constraintlayout:constraintlayout:2.0.4'
 
     //Testing
@@ -55,12 +68,8 @@ dependencies {
     androidTestImplementation 'androidx.test.ext:junit:1.1.2'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.3.0'
 
-    // Core KTX
-    implementation 'androidx.core:core-ktx:1.5.0-beta03'
-
-
     // Coroutine
-    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.4.3'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.5.0'
 
     // LiveData & ViewModel
     ext.lifecycle_version = '2.3.1'
@@ -70,17 +79,17 @@ dependencies {
     implementation "androidx.lifecycle:lifecycle-common-java8:$lifecycle_version"
 
     // Barcode ML Kit
-    implementation 'com.google.mlkit:barcode-scanning:16.1.1'
+    implementation 'com.google.mlkit:barcode-scanning:16.1.2'
 
     // CameraX
-    implementation "androidx.camera:camera-camera2:1.1.0-alpha03"
-    implementation "androidx.camera:camera-lifecycle:1.1.0-alpha03"
-    implementation "androidx.camera:camera-view:1.0.0-alpha23" // DO NOT UPGRADE TO SNAPSHOT
-
-    // Fragment KTX
-    implementation "androidx.fragment:fragment-ktx:1.3.2"
+    implementation "androidx.camera:camera-camera2:1.0.0"
+    implementation "androidx.camera:camera-lifecycle:1.0.0"
+    implementation "androidx.camera:camera-view:1.0.0-alpha25"
 
     // Activity KTX
-    implementation "androidx.activity:activity-ktx:1.2.2"
+    implementation "androidx.activity:activity-ktx:1.2.3"
+
+    // Timber
+    implementation 'com.jakewharton.timber:timber:4.7.1'
 
 }

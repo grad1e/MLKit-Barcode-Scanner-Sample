@@ -6,8 +6,8 @@ import android.content.pm.PackageManager
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
+import android.text.util.Linkify
 import android.util.DisplayMetrics
-import android.util.Log
 import android.view.ViewGroup
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
@@ -17,29 +17,25 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
-import androidx.lifecycle.asLiveData
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.snackbar.Snackbar
+import com.google.mlkit.vision.barcode.Barcode
 import com.google.mlkit.vision.barcode.BarcodeScanner
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.common.InputImage
 import dev.daryl.mlkitbarcodescanner.databinding.ActivityMainBinding
 import dev.daryl.mlkitbarcodescanner.databinding.BottomSheetBarcodeBinding
 import dev.daryl.mlkitbarcodescanner.utils.*
+import timber.log.Timber
 
+@SuppressLint("UnsafeExperimentalUsageError", "UnsafeOptInUsageError")
 class MainActivity : AppCompatActivity() {
 
-    companion object {
-        private const val TAG = "MainActivity"
-    }
+    private val binding by lazy { ActivityMainBinding.inflate(layoutInflater) }
+    private val viewModel by viewModels<MainViewModel>()
 
-    private lateinit var binding: ActivityMainBinding
-    private val viewModel by viewModels<MainViewModel> { MainViewModelFactory() }
-
-    private var camera: Camera? = null
-    private var cameraProvider: ProcessCameraProvider? = null
-
+    private lateinit var camera : Camera
     private val cameraSelector by lazy {
         CameraSelector.Builder().requireLensFacing(CameraSelector.LENS_FACING_BACK).build()
     }
@@ -49,9 +45,7 @@ class MainActivity : AppCompatActivity() {
         metrics.getAspectRatio()
     }
 
-    private val executor by lazy {
-        ContextCompat.getMainExecutor(this)
-    }
+    private val executor by lazy { ContextCompat.getMainExecutor(this) }
 
     private val requestPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) {
@@ -65,25 +59,21 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        binding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(binding.root)
         WindowCompat.setDecorFitsSystemWindows(window, false)
         binding.viewModel = viewModel
         binding.lifecycleOwner = this
-        setContentView(binding.root)
+        checkPermission()
+        setupClickListeners()
     }
 
     init {
         lifecycleScope.launchWhenResumed {
             viewModel.cameraProvider.observe(this@MainActivity) {
                 it?.let {
-                    cameraProvider = it
                     bindUseCase()
                 }
             }
-        }
-        lifecycleScope.launchWhenStarted {
-            checkPermission()
-            setupClickListeners()
         }
     }
 
@@ -91,36 +81,34 @@ class MainActivity : AppCompatActivity() {
         val barcodeBottomSheetBinding = BottomSheetBarcodeBinding.inflate(layoutInflater)
         val barcodeBottomSheetDialog = BottomSheetDialog(this).apply {
             setContentView(barcodeBottomSheetBinding.root)
-            setCancelable(false)
             setOnShowListener {
                 (barcodeBottomSheetBinding.root.parent as ViewGroup).background = ColorDrawable(
                     Color.TRANSPARENT
                 )
             }
+            setOnDismissListener {
+                bindUseCase()
+            }
             show()
         }
-        barcodeBottomSheetBinding.textResult.text = result
-        barcodeBottomSheetBinding.btnGotIt.setOnClickListener {
-            barcodeBottomSheetDialog.dismiss()
-        }
-        barcodeBottomSheetDialog.setOnDismissListener {
-            bindUseCase()
-        }
-    }
-
-    private fun setupClickListeners() {
-        viewModel.isBtnFlashClicked.asLiveData().observe(this) {
-            if (it) {
-                if (camera?.cameraInfo?.torchState?.value == TorchState.ON) {
-                    camera?.cameraControl?.enableTorch(false)
-                } else {
-                    camera?.cameraControl?.enableTorch(true)
-                }
+        barcodeBottomSheetBinding.apply {
+            textResult.text = result
+            Linkify.addLinks(textResult,Linkify.ALL)
+            btnGotIt.setOnClickListener {
+                barcodeBottomSheetDialog.dismiss()
             }
         }
     }
 
-    @SuppressLint("UnsafeExperimentalUsageError")
+    private fun setupClickListeners() {
+        binding.imgFlash.setOnClickListener {
+            when (camera.cameraInfo.torchState.value) {
+                TorchState.ON -> camera.cameraControl.enableTorch(false)
+                TorchState.OFF -> camera.cameraControl.enableTorch(true)
+            }
+        }
+    }
+
     private fun bindUseCase() {
         val barcodeScanner = BarcodeScanning.getClient()
 
@@ -149,81 +137,36 @@ class MainActivity : AppCompatActivity() {
             .build()
 
         try {
-            camera = cameraProvider?.bindToLifecycle(
+            viewModel.cameraProvider.value?.bindToLifecycle(
                 this,
                 cameraSelector,
                 useCaseGroup
-            )
+            )?.let {
+                camera = it
+            }
         } catch (e: Exception) {
-            Log.e(TAG, "bindUseCase: ", e)
+            Timber.e(e)
         }
     }
 
     private fun processImageProxy(barcodeScanner: BarcodeScanner, imageProxy: ImageProxy) {
-
-        /**
-         * Use any one of the given functions
-         */
-        // This scans the entire screen for barcodes
-        scanEntireView(barcodeScanner, imageProxy)
-
-        // This scans only a small part - done using bitmap - not recommended
-        //scanPartOfTheView(barcodeScanner, imageProxy)
-    }
-
-    @SuppressLint("UnsafeExperimentalUsageError")
-    private fun scanEntireView(barcodeScanner: BarcodeScanner, imageProxy: ImageProxy) {
         imageProxy.image?.let { image ->
             val inputImage = InputImage.fromMediaImage(image, imageProxy.imageInfo.rotationDegrees)
             barcodeScanner.process(inputImage)
                 .addOnSuccessListener { barcodeList ->
                     if (!barcodeList.isNullOrEmpty()) {
-                        Log.i(TAG, "processImageProxy: " + barcodeList[0].rawValue)
-                        cameraProvider?.unbindAll()
+                        Timber.i(barcodeList[0].rawValue)
+                        viewModel.cameraProvider.value?.unbindAll()
                         openBottomSheet(barcodeList[0].rawValue!!) // Change this as required
                     }
                 }.addOnFailureListener {
-                    Log.e(TAG, "processImageProxy: ", it)
+                    Timber.e(it)
                 }.addOnCompleteListener {
                     imageProxy.close()
                 }
         }
     }
 
-    private fun scanPartOfTheView(barcodeScanner: BarcodeScanner, imageProxy: ImageProxy) {
-        // Takes a screenshot of the camera feed (previewView)
-        val previewViewBitmap = binding.previewView.bitmap
-
-        if (previewViewBitmap != null) {
-
-            // Takes a screenshot of the view AppCompatImageView
-            getScreenShotFromView(binding.imageOverlay, this) {
-
-                // Darkens the view screenshot to keep the transparent portion intact, otherwise the barcode scanner will see through the
-                // partially transparent view and will detect the code
-                val darkenedBitmap = darkenBitMap(it)
-
-                // Overlays the darkenedImage over the original camera feed which gives a bitmap with only the centre portion visible
-                val overLaidBitmap = overlayBitmap(previewViewBitmap, darkenedBitmap)
-
-                // Converts the overlaid bitmap into an inputImage for barcode scanner to scan
-                val inputImage =
-                    InputImage.fromBitmap(overLaidBitmap, imageProxy.imageInfo.rotationDegrees)
-                barcodeScanner.process(inputImage)
-                    .addOnSuccessListener { barcodeList ->
-                        if (!barcodeList.isNullOrEmpty()) {
-                            Log.i(TAG, "processImageProxy: " + barcodeList[0].rawValue)
-                            cameraProvider?.unbindAll()
-                            openBottomSheet(barcodeList[0].rawValue!!) // Change this as required
-                        }
-                    }.addOnFailureListener { exception ->
-                        Log.e(TAG, "processImageProxy: ", exception)
-                    }.addOnCompleteListener {
-                        imageProxy.close()
-                    }
-            }
-        }
-    }
 
     private fun setupCameraProvider() {
         val cameraProvideFuture = ProcessCameraProvider.getInstance(this)

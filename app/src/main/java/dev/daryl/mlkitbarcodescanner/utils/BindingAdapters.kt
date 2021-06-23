@@ -8,9 +8,9 @@ import androidx.databinding.BindingAdapter
 /**
  * These bindingAdapters are used for setting up Window Insets
  */
-@BindingAdapter("topInsetMargin")
-fun View.setTopInsetMargin(value: Boolean) {
-    if (value) {
+@BindingAdapter("insetMarginTop", "insetMarginBottom", requireAll = false)
+fun View.setInsetMargin(marginTop: Boolean, marginBottom: Boolean) {
+    if (marginTop) {
         val initialTopInset = this.marginTop
         ViewCompat.setOnApplyWindowInsetsListener(this) { v, insets ->
             val topInset = insets.getInsets(WindowInsetsCompat.Type.systemBars()).top
@@ -20,11 +20,7 @@ fun View.setTopInsetMargin(value: Boolean) {
             insets
         }
     }
-}
-
-@BindingAdapter("bottomInsetMargin")
-fun View.setBottomInsetMargin(value: Boolean) {
-    if (value) {
+    if (marginBottom) {
         val initialBottomInset = this.marginBottom
         ViewCompat.setOnApplyWindowInsetsListener(this) { view, insets ->
             val bottomInset =
@@ -37,20 +33,16 @@ fun View.setBottomInsetMargin(value: Boolean) {
     }
 }
 
-@BindingAdapter("topInsetPadding")
-fun View.setTopInsetPadding(value: Boolean) {
-    if (value) {
+@BindingAdapter("insetPaddingTop", "insetPaddingBottom", requireAll = false)
+fun View.setInsetPadding(paddingTop: Boolean, paddingBottom: Boolean) {
+    if (paddingTop) {
         ViewCompat.setOnApplyWindowInsetsListener(this) { v, insets ->
             val topInset = insets.getInsets(WindowInsetsCompat.Type.systemBars()).top
             v.updatePadding(top = topInset)
             insets
         }
     }
-}
-
-@BindingAdapter("bottomInsetPadding")
-fun View.setBottomInsetPadding(value: Boolean) {
-    if (value) {
+    if (paddingBottom) {
         ViewCompat.setOnApplyWindowInsetsListener(this) { v, insets ->
             val bottomInset =
                 insets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.ime()).bottom
